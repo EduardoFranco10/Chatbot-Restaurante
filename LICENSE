@@ -1,24 +1,124 @@
-This is free and unencumbered software released into the public domain.
+import speech_recognition as sr
+import pyttsx3
+import datetime
+import os
+import time
+import json
+from threading import Thread
+from fuzzywuzzy import fuzz
+from fuzzywuzzy import process
 
-Anyone is free to copy, modify, publish, use, compile, sell, or
-distribute this software, either in source code form or as a compiled
-binary, for any purpose, commercial or non-commercial, and by any
-means.
+# Inicialização do reconhecimento de voz
+r = sr.Recognizer()
+# Inicialização da síntese de voz
+engine = pyttsx3.init()
+engine.rate = 150
 
-In jurisdictions that recognize copyright laws, the author or authors
-of this software dedicate any and all copyright interest in the
-software to the public domain. We make this dedication for the benefit
-of the public at large and to the detriment of our heirs and
-successors. We intend this dedication to be an overt act of
-relinquishment in perpetuity of all present and future rights to this
-software under copyright law.
+# Carregamento de dados do restaurante
+with open('dados_restaurante.json', 'r', encoding='utf-8') as f:
+    dados_restaurante = json.load(f)
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
-OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
-ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-OTHER DEALINGS IN THE SOFTWARE.
+def reconhecer_voz():
+    """
+    Função para reconhecer a fala do cliente.
+    """
+    with sr.Microphone() as source:
+        audio = r.listen(source)
 
-For more information, please refer to <https://unlicense.org>
+    try:
+        texto = r.recognize_google(audio)
+        return texto.lower()
+    except sr.UnknownValueError:
+        print("Não consegui entender o que você disse.")
+        return None
+    except sr.RequestError as e:
+        print("Ocorreu um erro no reconhecimento de voz: {e}".format(e))
+        return None
+
+def falar(texto):
+    """
+    Função para sintetizar texto em voz alta.
+    """
+    engine.say(texto)
+    engine.runAndWait()
+
+def boas_vindas():
+    """
+    Função para dar boas-vindas ao cliente.
+    """
+    hora = datetime.datetime.now().strftime('%H:%M')
+    nome_restaurante = dados_restaurante['nome']
+    falar(f"Boa noite! Seja bem-vindo ao {nome_restaurante}. São {hora} horas. Em que posso ajudá-lo?")
+
+def apresentar_opcoes():
+    """
+    Função para apresentar as opções de atendimento ao cliente.
+    """
+    falar("Gostaria de fazer um pedido, reservar uma mesa ou obter informações sobre o restaurante?")
+
+def fazer_pedido():
+    """
+    Função para processar o pedido do cliente.
+    """
+    falar("Ótimo! O que você gostaria de pedir?")
+    pedido = reconhecer_voz()
+
+    while True:
+        if pedido is None:
+            break
+        elif validar_pedido(pedido):
+            falar(f"Você gostaria de pedir {pedido}? (Sim/Não)")
+            confirmacao = reconhecer_voz()
+
+            if confirmacao.lower() == "sim":
+                registrar_pedido(pedido)
+                falar("Seu pedido foi registrado com sucesso! Obrigado!")
+                break
+            else:
+                falar("Tudo bem, podemos tentar novamente.")
+                pedido = reconhecer_voz()
+        else:
+            falar("Desculpe, não entendi o que você pediu. Por favor, repita o item.")
+            pedido = reconhecer_voz()
+
+def validar_pedido(texto):
+    """
+    Função para validar se o texto corresponde a um item do menu.
+    """
+    # Implementação da lógica de validação do pedido
+    # (por exemplo, comparação com o menu do restaurante)
+    return True
+
+def registrar_pedido(pedido):
+    """
+    Função para registrar o pedido do cliente.
+    """
+    # Implementação da lógica de registro do pedido
+    # (por exemplo, salvar em um banco de dados ou imprimir um recibo)
+    pass
+
+def reservar_mesa():
+    """
+    Função para processar a reserva de mesa do cliente.
+    """
+    falar("Gostaria de reservar uma mesa para quantas pessoas?")
+    quantidade_pessoas = reconhecer_voz()
+
+    while True:
+        try:
+            quantidade_pessoas = int(quantidade_pessoas)
+            if quantidade_pessoas > 0 and quantidade_pessoas <= dados_restaurante['capacidade_mesa']:
+                falar(f"Confirmando reserva para {quantidade_pessoas} pessoas. Em qual horário você gostaria de chegar?")
+                horario = reconhecer_voz()
+
+                # Validação do horário (implementar lógica)
+
+                falar(f"Confirmando reserva para {quantidade_pessoas} pessoas às {horario}. Seu nome, por favor?")
+                nome_cliente = reconhecer_voz()
+
+                # Registrar reserva (implementar lógica)
+
+                falar(f"Reserva confirmada para {nome_cliente}, às {horario}, para {quantidade_pessoas} pessoas. Obrigado!")
+                break
+            else:
+                falar(f"Infelizmente, não temos mesas disponíveis para {quantidade_pessoas} pessoas. Podemos tentar
